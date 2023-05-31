@@ -15,9 +15,12 @@
 #ifndef CONTROLLER_MANAGER__CONTROLLER_MANAGER_HPP_
 #define CONTROLLER_MANAGER__CONTROLLER_MANAGER_HPP_
 
+#include <map>
 #include <memory>
 #include <string>
 #include <tuple>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "controller_interface/chainable_controller_interface.hpp"
@@ -27,28 +30,34 @@
 #include "controller_manager/controller_spec.hpp"
 #include "controller_manager/visibility_control.h"
 #include "controller_manager_msgs/srv/configure_controller.hpp"
-#include "controller_manager_msgs/srv/configure_start_controller.hpp"
 #include "controller_manager_msgs/srv/list_controller_types.hpp"
 #include "controller_manager_msgs/srv/list_controllers.hpp"
 #include "controller_manager_msgs/srv/list_hardware_components.hpp"
 #include "controller_manager_msgs/srv/list_hardware_interfaces.hpp"
-#include "controller_manager_msgs/srv/load_configure_controller.hpp"
 #include "controller_manager_msgs/srv/load_controller.hpp"
-#include "controller_manager_msgs/srv/load_start_controller.hpp"
 #include "controller_manager_msgs/srv/reload_controller_libraries.hpp"
 #include "controller_manager_msgs/srv/set_hardware_component_state.hpp"
 #include "controller_manager_msgs/srv/switch_controller.hpp"
 #include "controller_manager_msgs/srv/unload_controller.hpp"
 
+#include "diagnostic_updater/diagnostic_updater.hpp"
+#include "hardware_interface/handle.hpp"
 #include "hardware_interface/resource_manager.hpp"
 
 #include "pluginlib/class_loader.hpp"
 
 #include "rclcpp/executor.hpp"
 #include "rclcpp/node.hpp"
+#include "rclcpp/node_interfaces/node_logging_interface.hpp"
+#include "rclcpp/node_interfaces/node_parameters_interface.hpp"
+#include "rclcpp/parameter.hpp"
 
 namespace controller_manager
 {
+using ControllersListIterator = std::vector<controller_manager::ControllerSpec>::const_iterator;
+
+rclcpp::NodeOptions get_cm_node_options();
+
 class ControllerManager : public rclcpp::Node
 {
 public:
@@ -60,13 +69,15 @@ public:
     std::unique_ptr<hardware_interface::ResourceManager> resource_manager,
     std::shared_ptr<rclcpp::Executor> executor,
     const std::string & manager_node_name = "controller_manager",
-    const std::string & namespace_ = "");
+    const std::string & namespace_ = "",
+    const rclcpp::NodeOptions & options = get_cm_node_options());
 
   CONTROLLER_MANAGER_PUBLIC
   ControllerManager(
     std::shared_ptr<rclcpp::Executor> executor,
     const std::string & manager_node_name = "controller_manager",
-    const std::string & namespace_ = "");
+    const std::string & namespace_ = "",
+    const rclcpp::NodeOptions & options = get_cm_node_options());
 
   CONTROLLER_MANAGER_PUBLIC
   virtual ~ControllerManager() = default;
@@ -118,27 +129,51 @@ public:
   CONTROLLER_MANAGER_PUBLIC
   controller_interface::return_type configure_controller(const std::string & controller_name);
 
-  /// switch_controller Stops some controllers and start others.
+  /// switch_controller Deactivates some controllers and activates others.
   /**
-   * \param[in] start_controllers is a list of controllers to start
-   * \param[in] stop_controllers is a list of controllers to stop
+   * \param[in] activate_controllers is a list of controllers to activate.
+   * \param[in] deactivate_controllers is a list of controllers to deactivate.
    * \param[in] set level of strictness (BEST_EFFORT or STRICT)
    * \see Documentation in controller_manager_msgs/SwitchController.srv
    */
   CONTROLLER_MANAGER_PUBLIC
   controller_interface::return_type switch_controller(
-    const std::vector<std::string> & start_controllers,
-    const std::vector<std::string> & stop_controllers, int strictness,
-    bool start_asap = kWaitForAllResources,
+    const std::vector<std::string> & activate_controllers,
+    const std::vector<std::string> & deactivate_controllers, int strictness,
+    bool activate_asap = kWaitForAllResources,
     const rclcpp::Duration & timeout = rclcpp::Duration::from_nanoseconds(kInfiniteTimeout));
 
+  /// Read values to state interfaces.
+  /**
+   * Read current values from hardware to state interfaces.
+   * **The method called in the (real-time) control loop.**
+   *
+   * \param[in]  time    The time at the start of this control loop iteration
+   * \param[in]  period  The measured period of the last control loop iteration
+   */
   CONTROLLER_MANAGER_PUBLIC
   void read(const rclcpp::Time & time, const rclcpp::Duration & period);
 
+  /// Run update on controllers
+  /**
+   * Call update of all controllers.
+   * **The method called in the (real-time) control loop.**
+   *
+   * \param[in]  time    The time at the start of this control loop iteration
+   * \param[in]  period  The measured period of the last control loop iteration
+   */
   CONTROLLER_MANAGER_PUBLIC
   controller_interface::return_type update(
     const rclcpp::Time & time, const rclcpp::Duration & period);
 
+  /// Write values from command interfaces.
+  /**
+   * Write values from command interface into hardware.
+   * **The method called in the (real-time) control loop.**
+   *
+   * \param[in]  time    The time at the start of this control loop iteration
+   * \param[in]  period  The measured period of the last control loop iteration
+   */
   CONTROLLER_MANAGER_PUBLIC
   void write(const rclcpp::Time & time, const rclcpp::Duration & period);
 
@@ -166,14 +201,59 @@ protected:
   CONTROLLER_MANAGER_PUBLIC
   void manage_switch();
 
+  /// Deactivate chosen controllers from real-time controller list.
+  /**
+   * Deactivate controllers with names \p controllers_to_deactivate from list \p rt_controller_list.
+   * The controller list will be iterated as many times as there are controller names.
+   *
+   * \param[in] rt_controller_list controllers in the real-time list.
+   * \param[in] controllers_to_deactivate names of the controller that have to be deactivated.
+   */
   CONTROLLER_MANAGER_PUBLIC
-  void stop_controllers();
+  void deactivate_controllers(
+    const std::vector<ControllerSpec> & rt_controller_list,
+    const std::vector<std::string> controllers_to_deactivate);
 
+  /**
+   * Switch chained mode for all the controllers with respect to the following cases:
+   * - a preceding controller is getting activated --> switch controller to chained mode;
+   * - all preceding controllers are deactivated --> switch controller from chained mode.
+   *
+   * \param[in] chained_mode_switch_list list of controller to switch chained mode.
+   * \param[in] to_chained_mode flag if controller should be switched *to* or *from* chained mode.
+   */
   CONTROLLER_MANAGER_PUBLIC
-  void start_controllers();
+  void switch_chained_mode(
+    const std::vector<std::string> & chained_mode_switch_list, bool to_chained_mode);
 
+  /// Activate chosen controllers from real-time controller list.
+  /**
+   * Activate controllers with names \p controllers_to_activate from list \p rt_controller_list.
+   * The controller list will be iterated as many times as there are controller names.
+   *
+   * \param[in] rt_controller_list controllers in the real-time list.
+   * \param[in] controllers_to_activate names of the controller that have to be activated.
+   */
   CONTROLLER_MANAGER_PUBLIC
-  void start_controllers_asap();
+  void activate_controllers(
+    const std::vector<ControllerSpec> & rt_controller_list,
+    const std::vector<std::string> controllers_to_activate);
+
+  /// Activate chosen controllers from real-time controller list.
+  /**
+   * Activate controllers with names \p controllers_to_activate from list \p rt_controller_list.
+   * The controller list will be iterated as many times as there are controller names.
+   *
+   * *NOTE*: There is currently not difference to `activate_controllers` method.
+   * Check https://github.com/ros-controls/ros2_control/issues/263 for more information.
+   *
+   * \param[in] rt_controller_list controllers in the real-time list.
+   * \param[in] controllers_to_activate names of the controller that have to be activated.
+   */
+  CONTROLLER_MANAGER_PUBLIC
+  void activate_controllers_asap(
+    const std::vector<ControllerSpec> & rt_controller_list,
+    const std::vector<std::string> controllers_to_activate);
 
   CONTROLLER_MANAGER_PUBLIC
   void list_controllers_srv_cb(
@@ -194,21 +274,6 @@ protected:
   void configure_controller_service_cb(
     const std::shared_ptr<controller_manager_msgs::srv::ConfigureController::Request> request,
     std::shared_ptr<controller_manager_msgs::srv::ConfigureController::Response> response);
-
-  CONTROLLER_MANAGER_PUBLIC
-  void load_and_configure_controller_service_cb(
-    const std::shared_ptr<controller_manager_msgs::srv::LoadConfigureController::Request> request,
-    std::shared_ptr<controller_manager_msgs::srv::LoadConfigureController::Response> response);
-
-  CONTROLLER_MANAGER_PUBLIC
-  void load_and_start_controller_service_cb(
-    const std::shared_ptr<controller_manager_msgs::srv::LoadStartController::Request> request,
-    std::shared_ptr<controller_manager_msgs::srv::LoadStartController::Response> response);
-
-  CONTROLLER_MANAGER_PUBLIC
-  void configure_and_start_controller_service_cb(
-    const std::shared_ptr<controller_manager_msgs::srv::ConfigureStartController::Request> request,
-    std::shared_ptr<controller_manager_msgs::srv::ConfigureStartController::Response> response);
 
   CONTROLLER_MANAGER_PUBLIC
   void reload_controller_libraries_service_cb(
@@ -243,11 +308,83 @@ protected:
   // Per controller update rate support
   unsigned int update_loop_counter_ = 0;
   unsigned int update_rate_ = 100;
+  std::vector<std::vector<std::string>> chained_controllers_configuration_;
+
+  std::unique_ptr<hardware_interface::ResourceManager> resource_manager_;
 
 private:
   std::vector<std::string> get_controller_names();
+  std::pair<std::string, std::string> split_command_interface(
+    const std::string & command_interface);
 
-  std::unique_ptr<hardware_interface::ResourceManager> resource_manager_;
+  /**
+   * Clear request lists used when switching controllers. The lists are shared between "callback"
+   * and "control loop" threads.
+   */
+  void clear_requests();
+
+  /**
+   * If a controller is deactivated all following controllers (if any exist) should be switched
+   * 'from' the chained mode.
+   *
+   * \param[in] controllers list with controllers.
+   */
+  void propagate_deactivation_of_chained_mode(const std::vector<ControllerSpec> & controllers);
+
+  /// Check if all the following controllers will be in active state and in the chained mode
+  /// after controllers' switch.
+  /**
+   * Check recursively that all following controllers of the @controller_it
+   * - are already active,
+   * - will not be deactivated,
+   * - or will be activated.
+   * The following controllers are added to the request to switch in the chained mode or removed
+   * from the request to switch from the chained mode.
+   *
+   * For each controller the whole chain of following controllers is checked.
+   *
+   * NOTE: The automatically adding of following controller into activate list is not implemented
+   * yet.
+   *
+   * \param[in] controllers list with controllers.
+   * \param[in] strictness if value is equal "MANIPULATE_CONTROLLERS_CHAIN" then all following
+   * controllers will be automatically added to the activate request list if they are not in the
+   * deactivate request.
+   * \param[in] controller_it iterator to the controller for which the following controllers are
+   * checked.
+   *
+   * \returns return_type::OK if all following controllers pass the checks, otherwise
+   * return_type::ERROR.
+   */
+  controller_interface::return_type check_following_controllers_for_activate(
+    const std::vector<ControllerSpec> & controllers, int strictness,
+    const ControllersListIterator controller_it);
+
+  /// Check if all the preceding controllers will be in inactive state after controllers' switch.
+  /**
+   * Check that all preceding controllers of the @controller_it
+   * - are inactive,
+   * - will be deactivated,
+   * - and will not be activated.
+   *
+   * NOTE: The automatically adding of preceding controllers into deactivate list is not implemented
+   * yet.
+   *
+   * \param[in] controllers list with controllers.
+   * \param[in] strictness if value is equal "MANIPULATE_CONTROLLERS_CHAIN" then all preceding
+   * controllers will be automatically added to the deactivate request list.
+   * \param[in] controller_it iterator to the controller for which the preceding controllers are
+   * checked.
+   *
+   * \returns return_type::OK if all preceding controllers pass the checks, otherwise
+   * return_type::ERROR.
+   */
+  controller_interface::return_type check_preceeding_controllers_for_deactivate(
+    const std::vector<ControllerSpec> & controllers, int strictness,
+    const ControllersListIterator controller_it);
+
+  void controller_activity_diagnostic_callback(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  diagnostic_updater::Updater diagnostics_updater_;
 
   std::shared_ptr<rclcpp::Executor> executor_;
 
@@ -291,7 +428,8 @@ private:
      * lists match and returns a reference to it
      * This referenced list can be modified safely until switch_updated_controller_list()
      * is called, at this point the RT thread may start using it at any time
-     * \param[in] guard Guard needed to make sure the caller is the only one accessing the unused by rt list
+     * \param[in] guard Guard needed to make sure the caller is the only one accessing the unused by
+     * rt list
      */
     std::vector<ControllerSpec> & get_unused_list(
       const std::lock_guard<std::recursive_mutex> & guard);
@@ -299,7 +437,8 @@ private:
     /// get_updated_list Returns a const reference to the most updated list.
     /**
      * \warning May or may not being used by the realtime thread, read-only reference for safety
-     * \param[in] guard Guard needed to make sure the caller is the only one accessing the unused by rt list
+     * \param[in] guard Guard needed to make sure the caller is the only one accessing the unused by
+     * rt list
      */
     const std::vector<ControllerSpec> & get_updated_list(
       const std::lock_guard<std::recursive_mutex> & guard) const;
@@ -307,7 +446,8 @@ private:
     /**
      * switch_updated_list Switches the "updated" and "outdated" lists, and waits
      *  until the RT thread is using the new "updated" list.
-     * \param[in] guard Guard needed to make sure the caller is the only one accessing the unused by rt list
+     * \param[in] guard Guard needed to make sure the caller is the only one accessing the unused by
+     * rt list
      */
     void switch_updated_list(const std::lock_guard<std::recursive_mutex> & guard);
 
@@ -345,12 +485,6 @@ private:
   rclcpp::Service<controller_manager_msgs::srv::LoadController>::SharedPtr load_controller_service_;
   rclcpp::Service<controller_manager_msgs::srv::ConfigureController>::SharedPtr
     configure_controller_service_;
-  rclcpp::Service<controller_manager_msgs::srv::LoadConfigureController>::SharedPtr
-    load_and_configure_controller_service_;
-  rclcpp::Service<controller_manager_msgs::srv::LoadStartController>::SharedPtr
-    load_and_start_controller_service_;
-  rclcpp::Service<controller_manager_msgs::srv::ConfigureStartController>::SharedPtr
-    configure_and_start_controller_service_;
   rclcpp::Service<controller_manager_msgs::srv::ReloadControllerLibraries>::SharedPtr
     reload_controller_libraries_service_;
   rclcpp::Service<controller_manager_msgs::srv::SwitchController>::SharedPtr
@@ -365,8 +499,10 @@ private:
   rclcpp::Service<controller_manager_msgs::srv::SetHardwareComponentState>::SharedPtr
     set_hardware_component_state_service_;
 
-  std::vector<std::string> start_request_, stop_request_;
-  std::vector<std::string> start_command_interface_request_, stop_command_interface_request_;
+  std::vector<std::string> activate_request_, deactivate_request_;
+  std::vector<std::string> to_chained_mode_request_, from_chained_mode_request_;
+  std::vector<std::string> activate_command_interface_request_,
+    deactivate_command_interface_request_;
 
   struct SwitchParams
   {
@@ -376,11 +512,72 @@ private:
 
     // Switch options
     int strictness = {0};
-    bool start_asap = {false};
+    bool activate_asap = {false};
     rclcpp::Duration timeout = rclcpp::Duration{0, 0};
   };
 
   SwitchParams switch_params_;
+
+  class ControllerThreadWrapper
+  {
+  public:
+    ControllerThreadWrapper(
+      std::shared_ptr<controller_interface::ControllerInterfaceBase> & controller,
+      int cm_update_rate)
+    : terminated_(false), controller_(controller), thread_{}, cm_update_rate_(cm_update_rate)
+    {
+    }
+
+    ControllerThreadWrapper(const ControllerThreadWrapper & t) = delete;
+    ControllerThreadWrapper(ControllerThreadWrapper && t) = default;
+    ~ControllerThreadWrapper()
+    {
+      terminated_.store(true, std::memory_order_seq_cst);
+      if (thread_.joinable())
+      {
+        thread_.join();
+      }
+    }
+
+    void activate()
+    {
+      thread_ = std::thread(&ControllerThreadWrapper::call_controller_update, this);
+    }
+
+    void call_controller_update()
+    {
+      using TimePoint = std::chrono::system_clock::time_point;
+      unsigned int used_update_rate =
+        controller_->get_update_rate() == 0
+          ? cm_update_rate_
+          : controller_
+              ->get_update_rate();  // determines if the controller's or CM's update rate is used
+
+      while (!terminated_.load(std::memory_order_relaxed))
+      {
+        auto const period = std::chrono::nanoseconds(1'000'000'000 / used_update_rate);
+        TimePoint next_iteration_time =
+          TimePoint(std::chrono::nanoseconds(controller_->get_node()->now().nanoseconds()));
+
+        if (controller_->get_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
+        {
+          // critical section, not implemented yet
+        }
+
+        next_iteration_time += period;
+        std::this_thread::sleep_until(next_iteration_time);
+      }
+    }
+
+  private:
+    std::atomic<bool> terminated_;
+    std::shared_ptr<controller_interface::ControllerInterfaceBase> controller_;
+    std::thread thread_;
+    unsigned int cm_update_rate_;
+  };
+
+  std::unordered_map<std::string, std::unique_ptr<ControllerThreadWrapper>>
+    async_controller_threads_;
 };
 
 }  // namespace controller_manager

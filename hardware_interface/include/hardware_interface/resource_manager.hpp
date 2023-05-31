@@ -16,31 +16,42 @@
 #define HARDWARE_INTERFACE__RESOURCE_MANAGER_HPP_
 
 #include <memory>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "hardware_interface/actuator.hpp"
 #include "hardware_interface/hardware_component_info.hpp"
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/loaned_command_interface.hpp"
 #include "hardware_interface/loaned_state_interface.hpp"
+#include "hardware_interface/sensor.hpp"
+#include "hardware_interface/system.hpp"
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
+#include "hardware_interface/types/lifecycle_state_names.hpp"
+#include "lifecycle_msgs/msg/state.hpp"
 #include "rclcpp/duration.hpp"
+#include "rclcpp/node.hpp"
 #include "rclcpp/time.hpp"
 
 namespace hardware_interface
 {
-class ActuatorInterface;
-class SensorInterface;
-class SystemInterface;
 class ResourceStorage;
+class ControllerManager;
+
+struct HardwareReadWriteStatus
+{
+  bool ok;
+  std::vector<std::string> failed_hardware_names;
+};
 
 class HARDWARE_INTERFACE_PUBLIC ResourceManager
 {
 public:
   /// Default constructor for the Resource Manager.
-  ResourceManager();
+  ResourceManager(
+    unsigned int update_rate = 100,
+    rclcpp::node_interfaces::NodeClockInterface::SharedPtr clock_interface = nullptr);
 
   /// Constructor for the Resource Manager.
   /**
@@ -59,7 +70,9 @@ public:
    * "autostart_components" and "autoconfigure_components" instead.
    */
   explicit ResourceManager(
-    const std::string & urdf, bool validate_interfaces = true, bool activate_all = false);
+    const std::string & urdf, bool validate_interfaces = true, bool activate_all = false,
+    unsigned int update_rate = 100,
+    rclcpp::node_interfaces::NodeClockInterface::SharedPtr clock_interface = nullptr);
 
   ResourceManager(const ResourceManager &) = delete;
 
@@ -102,17 +115,84 @@ public:
    */
   std::vector<std::string> available_state_interfaces() const;
 
-  /// Checks whether a state interface is registered under the given key.
-  /**
-   * \return true if interface exist, false otherwise.
-   */
-  bool state_interface_exists(const std::string & key) const;
-
   /// Checks whether a state interface is available under the given key.
   /**
    * \return true if interface is available, false otherwise.
    */
   bool state_interface_is_available(const std::string & name) const;
+
+  /// Add controllers' reference interfaces to resource manager.
+  /**
+   * Interface for transferring management of reference interfaces to resource manager.
+   * When chaining controllers, reference interfaces are used as command interface of preceding
+   * controllers.
+   * Therefore, they should be managed in the same way as command interface of hardware.
+   *
+   * \param[in] controller_name name of the controller which reference interfaces are imported.
+   * \param[in] interfaces list of controller's reference interfaces as CommandInterfaces.
+   */
+  void import_controller_reference_interfaces(
+    const std::string & controller_name, std::vector<CommandInterface> & interfaces);
+
+  /// Get list of reference interface of a controller.
+  /**
+   * Returns lists of stored reference interfaces names for a controller.
+   *
+   * \param[in] controller_name for which list of reference interface names is returned.
+   * \returns list of reference interface names.
+   */
+  std::vector<std::string> get_controller_reference_interface_names(
+    const std::string & controller_name);
+
+  /// Add controller's reference interface to available list.
+  /**
+   * Adds interfaces of a controller with given name to the available list. This method should be
+   * called when a controller gets activated with chained mode turned on. That means, the
+   * controller's reference interfaces can be used by another controller in chained architectures.
+   *
+   * \param[in] controller_name name of the controller which interfaces should become available.
+   */
+  void make_controller_reference_interfaces_available(const std::string & controller_name);
+
+  /// Remove controller's reference interface to available list.
+  /**
+   * Removes interfaces of a controller with given name from the available list. This method should
+   * be called when a controller gets deactivated and its reference interfaces cannot be used by
+   * another controller anymore.
+   *
+   * \param[in] controller_name name of the controller which interfaces should become unavailable.
+   */
+  void make_controller_reference_interfaces_unavailable(const std::string & controller_name);
+
+  /// Remove controllers reference interfaces from resource manager.
+  /**
+   * Remove reference interfaces from resource manager, i.e., resource storage.
+   * The interfaces will be deleted from all internal maps and lists.
+   *
+   * \param[in] controller_name list of interface names that will be deleted from resource manager.
+   */
+  void remove_controller_reference_interfaces(const std::string & controller_name);
+
+  /// Cache mapping between hardware and controllers using it
+  /**
+   * Find mapping between controller and hardware based on interfaces controller with
+   * \p controller_name is using and cache those for later usage.
+   *
+   * \param[in] controller_name name of the controller which interfaces are provided.
+   * \param[in] interfaces list of interfaces controller with \p controller_name is using.
+   */
+  void cache_controller_to_hardware(
+    const std::string & controller_name, const std::vector<std::string> & interfaces);
+
+  /// Return cached controllers for a specific hardware.
+  /**
+   * Return list of cached controller names that use the hardware with name \p hardware_name.
+   *
+   * \param[in] hardware_name the name of the hardware for which cached controllers should be
+   * returned. \returns list of cached controller names that depend on hardware with name \p
+   * hardware_name.
+   */
+  std::vector<std::string> get_cached_controllers_to_hardware(const std::string & hardware_name);
 
   /// Checks whether a command interface is already claimed.
   /**
@@ -150,13 +230,6 @@ public:
    */
   std::vector<std::string> available_command_interfaces() const;
 
-  /// Checks whether a command interface is registered under the given key.
-  /**
-   * \param[in] key string identifying the interface to check.
-   * \return true if interface exist, false otherwise.
-   */
-  bool command_interface_exists(const std::string & key) const;
-
   /// Checks whether a command interface is available under the given name.
   /**
    * \param[in] name string identifying the interface to check.
@@ -193,7 +266,7 @@ public:
    * \note given that no hardware_info is available, the component has to be configured
    * externally and prior to the call to import.
    * \param[in] actuator pointer to the actuator interface.
-   * \param[in]hardware_info hardware info
+   * \param[in] hardware_info hardware info
    */
   void import_component(
     std::unique_ptr<ActuatorInterface> actuator, const HardwareInfo & hardware_info);
@@ -293,7 +366,7 @@ public:
    * Part of the real-time critical update loop.
    * It is realtime-safe if used hadware interfaces are implemented adequately.
    */
-  void read(const rclcpp::Time & time, const rclcpp::Duration & period);
+  HardwareReadWriteStatus read(const rclcpp::Time & time, const rclcpp::Duration & period);
 
   /// Write all loaded hardware components.
   /**
@@ -302,7 +375,7 @@ public:
    * Part of the real-time critical update loop.
    * It is realtime-safe if used hadware interfaces are implemented adequately.
    */
-  void write(const rclcpp::Time & time, const rclcpp::Duration & period);
+  HardwareReadWriteStatus write(const rclcpp::Time & time, const rclcpp::Duration & period);
 
   /// Activates all available hardware components in the system.
   /**
@@ -311,6 +384,19 @@ public:
    * are activated per default.
    */
   void activate_all_components();
+
+  /// Checks whether a command interface is registered under the given key.
+  /**
+   * \param[in] key string identifying the interface to check.
+   * \return true if interface exist, false otherwise.
+   */
+  bool command_interface_exists(const std::string & key) const;
+
+  /// Checks whether a state interface is registered under the given key.
+  /**
+   * \return true if interface exist, false otherwise.
+   */
+  bool state_interface_exists(const std::string & key) const;
 
 private:
   void validate_storage(const std::vector<hardware_interface::HardwareInfo> & hardware_info) const;
@@ -321,7 +407,12 @@ private:
 
   mutable std::recursive_mutex resource_interfaces_lock_;
   mutable std::recursive_mutex claimed_command_interfaces_lock_;
+  mutable std::recursive_mutex resources_lock_;
+
   std::unique_ptr<ResourceStorage> resource_storage_;
+
+  // Structure to store read and write status so it is not initialized in the real-time loop
+  HardwareReadWriteStatus read_write_status;
 };
 
 }  // namespace hardware_interface

@@ -2,6 +2,108 @@
 Changelog for package controller_manager_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.13.0 (2023-05-18)
+-------------------
+
+3.12.2 (2023-04-29)
+-------------------
+
+3.12.1 (2023-04-14)
+-------------------
+
+3.12.0 (2023-04-02)
+-------------------
+
+3.11.0 (2023-03-22)
+-------------------
+
+3.10.0 (2023-03-16)
+-------------------
+
+3.9.1 (2023-03-09)
+------------------
+
+3.9.0 (2023-02-28)
+------------------
+* Remove deprecations from CLI and controller_manager (`#948 <https://github.com/ros-controls/ros2_control/issues/948>`_)
+  Co-authored-by: Bence Magyar <bence.magyar.robotics@gmail.com>
+* Contributors: Christoph Fröhlich
+
+3.8.0 (2023-02-10)
+------------------
+* Fix CMake install so overriding works (`#926 <https://github.com/ros-controls/ros2_control/issues/926>`_)
+* Contributors: Tyler Weaver
+
+3.7.0 (2023-01-24)
+------------------
+
+3.6.0 (2023-01-12)
+------------------
+
+3.5.1 (2023-01-06)
+------------------
+
+3.5.0 (2022-12-06)
+------------------
+* Rename class type to plugin name #api-breaking #abi-breaking (`#780 <https://github.com/ros-controls/ros2_control/issues/780>`_)
+* Contributors: Bence Magyar
+
+3.4.0 (2022-11-27)
+------------------
+
+3.3.0 (2022-11-15)
+------------------
+
+3.2.0 (2022-10-15)
+------------------
+
+3.1.0 (2022-10-05)
+------------------
+
+3.0.0 (2022-09-19)
+------------------
+
+2.15.0 (2022-09-19)
+-------------------
+
+2.14.0 (2022-09-04)
+-------------------
+
+2.13.0 (2022-08-03)
+-------------------
+* Add chained controllers information in list controllers service #abi-braking (`#758 <https://github.com/ros-controls/ros2_control/issues/758>`_)
+  * add chained controllers in ros2controlcli
+  * remove controller_group from service
+  * added comments to ControllerState message
+  * added comments to ChainedConnection message
+* Contributors: Paul Gesel
+
+2.12.1 (2022-07-14)
+-------------------
+
+2.12.0 (2022-07-09)
+-------------------
+* Deprecate and rename `start` and `stop` nomenclature toward user to `activate` and `deactivate` #ABI-breaking (`#755 <https://github.com/ros-controls/ros2_control/issues/755>`_)
+  * Rename fields and deprecate old nomenclature.
+  * Add new defines to SwitchController.srv
+  * Deprecated start/stop nomenclature in all CLI commands.
+  * Deprecate 'start_asap' too as other fields.
+* Contributors: Denis Štogl
+
+2.11.0 (2022-07-03)
+-------------------
+* Remove hybrid services in controller manager. They are just overhead. (`#761 <https://github.com/ros-controls/ros2_control/issues/761>`_)
+* Update and fix CI setup (`#752 <https://github.com/ros-controls/ros2_control/issues/752>`_)
+* Update maintainers of packages (`#753 <https://github.com/ros-controls/ros2_control/issues/753>`_)
+* Remove ament autolint (`#749 <https://github.com/ros-controls/ros2_control/issues/749>`_)
+* Contributors: Bence Magyar, Denis Štogl
+
+2.10.0 (2022-06-18)
+-------------------
+
+2.9.0 (2022-05-19)
+------------------
+
 2.8.0 (2022-05-13)
 ------------------
 

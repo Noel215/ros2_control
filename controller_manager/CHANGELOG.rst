@@ -2,6 +2,181 @@
 Changelog for package controller_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.13.0 (2023-05-18)
+-------------------
+* Add class for thread management of async hw interfaces (`#981 <https://github.com/ros-controls/ros2_control/issues/981>`_)
+* Fix GitHub link on control.ros.org (`#1022 <https://github.com/ros-controls/ros2_control/issues/1022>`_)
+* Remove log-level argument from spawner script (`#1013 <https://github.com/ros-controls/ros2_control/issues/1013>`_)
+* Contributors: Christoph Fröhlich, Márk Szitanics, Bijou Abraham
+
+3.12.2 (2023-04-29)
+-------------------
+
+3.12.1 (2023-04-14)
+-------------------
+
+3.12.0 (2023-04-02)
+-------------------
+* [Controller Interface] Add time and period paramters to update_reference_from_subscribers() (`#846 <https://github.com/ros-controls/ros2_control/issues/846>`_) #API-break
+* Contributors: Robotgir
+
+3.11.0 (2023-03-22)
+-------------------
+* [ControllerManager] Add Class for Async Controllers and Lifecycle Management (`#932 <https://github.com/ros-controls/ros2_control/issues/932>`_)
+* Consistent use of colors for warning and error msgs in spawner (`#974 <https://github.com/ros-controls/ros2_control/issues/974>`_)
+* Fix wrong warning messages (`#973 <https://github.com/ros-controls/ros2_control/issues/973>`_)
+* Add log level support to spawner node (`#972 <https://github.com/ros-controls/ros2_control/issues/972>`_)
+* Contributors: Dr. Denis, Márk Szitanics, Bijou Abraham
+
+3.10.0 (2023-03-16)
+-------------------
+* add spawner for hardware (`#941 <https://github.com/ros-controls/ros2_control/issues/941>`_)
+* Contributors: Manuel Muth
+
+3.9.1 (2023-03-09)
+------------------
+
+3.9.0 (2023-02-28)
+------------------
+* fix AttributeError: Parameter object attribute name is read-only (`#957 <https://github.com/ros-controls/ros2_control/issues/957>`_)
+* Remove deprecations from CLI and controller_manager (`#948 <https://github.com/ros-controls/ros2_control/issues/948>`_)
+* Expose node options to controller manager (`#942 <https://github.com/ros-controls/ros2_control/issues/942>`_)
+* Contributors: Christoph Fröhlich, Noel Jiménez García, methylDragon
+
+3.8.0 (2023-02-10)
+------------------
+* Fix CMake install so overriding works (`#926 <https://github.com/ros-controls/ros2_control/issues/926>`_)
+* 🖤 Add Black formatter for Python files. (`#936 <https://github.com/ros-controls/ros2_control/issues/936>`_)
+* Add list_hardware_components CLI <https://github.com/ros-controls/ros2_control/issues/796>`_ - Adds list_hardware_components to CLI (`#891 <https://github.com/ros-controls/ros2_control/issues/891>`_)
+* Contributors: Andy McEvoy, Dr. Denis, Tyler Weaver
+
+3.7.0 (2023-01-24)
+------------------
+* Do not use CLI calls but direct API for setting parameters. (`#910 <https://github.com/ros-controls/ros2_control/issues/910>`_)
+* Optimize output of controller spawner (`#909 <https://github.com/ros-controls/ros2_control/issues/909>`_)
+* ControllerManager: catch exception by reference (`#906 <https://github.com/ros-controls/ros2_control/issues/906>`_)
+* Test fix: don't keep reference to the controller in the test when it should be destroyed in the controller manager (`#883 <https://github.com/ros-controls/ros2_control/issues/883>`_)
+* Merge branch 'fix-update-rate' into humble (`#874 <https://github.com/ros-controls/ros2_control/issues/874>`_)
+* Contributors: Christopher Wecht, Dr. Denis, Tony Najjar, sgmurray
+
+3.6.0 (2023-01-12)
+------------------
+* Fix QoS deprecation warnings (`#879 <https://github.com/ros-controls/ros2_control/issues/879>`_)
+* Add backward_ros to controller_manager (`#886 <https://github.com/ros-controls/ros2_control/issues/886>`_)
+* Contributors: Andy McEvoy, Bence Magyar
+
+3.5.1 (2023-01-06)
+------------------
+* Prevent controller manager from crashing when controller's plugin has error during loading. (`#881 <https://github.com/ros-controls/ros2_control/issues/881>`_)
+* Contributors: Denis Štogl
+
+3.5.0 (2022-12-06)
+------------------
+* Rename class type to plugin name #api-breaking #abi-breaking (`#780 <https://github.com/ros-controls/ros2_control/issues/780>`_)
+* Namespace Loaded Controllers (`#852 <https://github.com/ros-controls/ros2_control/issues/852>`_)
+* Contributors: Bence Magyar, sp-sophia-labs
+
+3.4.0 (2022-11-27)
+------------------
+* Use a thread priority library from realtime_tools (`#794 <https://github.com/ros-controls/ros2_control/issues/794>`_)
+* [Doc] Correct type of update_rate parameter (`#858 <https://github.com/ros-controls/ros2_control/issues/858>`_)
+* Contributors: Andy Zelenak, Denis Štogl, Bence Magyar
+
+3.3.0 (2022-11-15)
+------------------
+* Adding activation/deactivation tests for chain controllers (`#809 <https://github.com/ros-controls/ros2_control/issues/809>`_)
+* Fix const-ness in std::chrono::time_point construction and explicitly use std::chrono::nanoseconds as std::chrono::time_point template parameter to help compilation on macOS as its std::chrono::system_clock::time_point defaults to std::chrono::milliseconds for duration type (`#848 <https://github.com/ros-controls/ros2_control/issues/848>`_)
+* [ControllerManager] Fix wrong initialization order and avoid compiler warnings (`#836 <https://github.com/ros-controls/ros2_control/issues/836>`_)
+* Contributors: Adrian Zwiener, Bilal Gill, Felix Exner, light-tech
+
+3.2.0 (2022-10-15)
+------------------
+
+3.1.0 (2022-10-05)
+------------------
+* Don't ask to export reference interface if controller not 'inactive' or 'active' (`#824 <https://github.com/ros-controls/ros2_control/issues/824>`_)
+* Add diagnostics for controllers activity (`#820 <https://github.com/ros-controls/ros2_control/issues/820>`_)
+* Search for controller manager in the same namespace as spawner (`#810 <https://github.com/ros-controls/ros2_control/issues/810>`_)
+* Handle HW errors on read and write in CM by stopping controllers (`#742 <https://github.com/ros-controls/ros2_control/issues/742>`_)
+  Add code for deactivating controller when hardware gets an error on read and write.
+  Fix misleading variable name in the tests.
+  Remove all interface from available list for hardware when an error happens.
+  Do some more variable renaming to the new nomenclature.
+* Contributors: Denis Štogl, Tony Najjar
+
+3.0.0 (2022-09-19)
+------------------
+
+2.15.0 (2022-09-19)
+-------------------
+
+2.14.0 (2022-09-04)
+-------------------
+* Add doxygen comments (`#777 <https://github.com/ros-controls/ros2_control/issues/777>`_)
+* Contributors: Bence Magyar, Denis Štogl
+
+2.13.0 (2022-08-03)
+-------------------
+* Clang tidy: delete a redundant return (`#790 <https://github.com/ros-controls/ros2_control/issues/790>`_)
+* Add chained controllers information in list controllers service #abi-braking (`#758 <https://github.com/ros-controls/ros2_control/issues/758>`_)
+  * add chained controllers in ros2controlcli
+  * remove controller_group from service
+  * added comments to ControllerState message
+  * added comments to ChainedConnection message
+* spawner.py: Fix python logging on deprecation warning (`#787 <https://github.com/ros-controls/ros2_control/issues/787>`_)
+* Add documentation for realtime permission (`#781 <https://github.com/ros-controls/ros2_control/issues/781>`_)
+* Fix bug in spawner with getter for node's logger (`#776 <https://github.com/ros-controls/ros2_control/issues/776>`_)
+* Contributors: Andy Zelenak, Felix Exner, Paul Gesel, Bijou Abraham
+
+2.12.1 (2022-07-14)
+-------------------
+* Rename CM members from start/stop to activate/deactivate nomenclature. (`#756 <https://github.com/ros-controls/ros2_control/issues/756>`_)
+* Fix spelling in comment (`#769 <https://github.com/ros-controls/ros2_control/issues/769>`_)
+* Contributors: Denis Štogl, Tyler Weaver
+
+2.12.0 (2022-07-09)
+-------------------
+* Deprecate and rename `start` and `stop` nomenclature toward user to `activate` and `deactivate` #ABI-breaking (`#755 <https://github.com/ros-controls/ros2_control/issues/755>`_)
+  * Rename fields and deprecate old nomenclature.
+  * Add new defines to SwitchController.srv
+  * Deprecated start/stop nomenclature in all CLI commands.
+  * Deprecate 'start_asap' too as other fields.
+* [ros2_control_node] Automatically detect if RT kernel is used and opportunistically enable SCHED_FIFO (`#748 <https://github.com/ros-controls/ros2_control/issues/748>`_)
+* Contributors: Denis Štogl, Tyler Weaver
+
+2.11.0 (2022-07-03)
+-------------------
+* Remove hybrid services in controller manager. (`#761 <https://github.com/ros-controls/ros2_control/issues/761>`_)
+* [Interfaces] Improved ```get_name()``` method of hardware interfaces #api-breaking (`#737 <https://github.com/ros-controls/ros2_control/issues/737>`_)
+* Update maintainers of packages (`#753 <https://github.com/ros-controls/ros2_control/issues/753>`_)
+* Fix test dependency for chainable test (`#751 <https://github.com/ros-controls/ros2_control/issues/751>`_)
+* Remove ament autolint (`#749 <https://github.com/ros-controls/ros2_control/issues/749>`_)
+* Full functionality of chainable controllers in controller manager (`#667 <https://github.com/ros-controls/ros2_control/issues/667>`_)
+  * auto-switching of chained mode in controllers
+  * interface-matching approach for managing chaining controllers
+* Fixup spanwer and unspawner tests. It changes spawner a bit to handle interupts internally. (`#745 <https://github.com/ros-controls/ros2_control/issues/745>`_)
+* Add missing field to initializer lists in tests (`#746 <https://github.com/ros-controls/ros2_control/issues/746>`_)
+* Small but useful output update on controller manager. (`#741 <https://github.com/ros-controls/ros2_control/issues/741>`_)
+* Fixed period passed to hardware components always 0 (`#738 <https://github.com/ros-controls/ros2_control/issues/738>`_)
+* Contributors: Bence Magyar, Denis Štogl, Maciej Bednarczyk, Lucas Schulze
+
+2.10.0 (2022-06-18)
+-------------------
+* Make RHEL CI happy! (`#730 <https://github.com/ros-controls/ros2_control/issues/730>`_)
+* CMakeLists cleanup (`#733 <https://github.com/ros-controls/ros2_control/issues/733>`_)
+* Update to clang format 12 (`#731 <https://github.com/ros-controls/ros2_control/issues/731>`_)
+* Contributors: Andy Zelenak, Bence Magyar, Márk Szitanics
+
+2.9.0 (2022-05-19)
+------------------
+* Adding base class for chained controllers: `ChainedControllersInterface` (`#663 <https://github.com/ros-controls/ros2_control/issues/663>`_)
+  * Extending ControllerInterface with methods for chainable controllers.
+  * Switching to chained_mode is only forbidden if controller is active.
+  * Default implementation for 'on_set_chained_mode' method.
+  * Use two internal methods instead of 'update' directly on chained controllers.
+* Add ControllerInterfaceBase class with methods for chainable controller (`#717 <https://github.com/ros-controls/ros2_control/issues/717>`_)
+* Contributors: Denis Štogl
+
 2.8.0 (2022-05-13)
 ------------------
 * Pass time and period to read() and write() (`#715 <https://github.com/ros-controls/ros2_control/issues/715>`_)

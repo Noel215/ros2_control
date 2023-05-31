@@ -2,6 +2,98 @@
 Changelog for package transmission_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.13.0 (2023-05-18)
+-------------------
+
+3.12.2 (2023-04-29)
+-------------------
+
+3.12.1 (2023-04-14)
+-------------------
+
+3.12.0 (2023-04-02)
+-------------------
+
+3.11.0 (2023-03-22)
+-------------------
+
+3.10.0 (2023-03-16)
+-------------------
+* Split transmission interfaces (`#938 <https://github.com/ros-controls/ros2_control/issues/938>`_)
+* Contributors: Noel Jiménez García
+
+3.9.1 (2023-03-09)
+------------------
+* Fix missing include (`#963 <https://github.com/ros-controls/ros2_control/issues/963>`_)
+* Contributors: Bence Magyar
+
+3.9.0 (2023-02-28)
+------------------
+
+3.8.0 (2023-02-10)
+------------------
+* Fix CMake install so overriding works (`#926 <https://github.com/ros-controls/ros2_control/issues/926>`_)
+* Contributors: Tyler Weaver
+
+3.7.0 (2023-01-24)
+------------------
+
+3.6.0 (2023-01-12)
+------------------
+
+3.5.1 (2023-01-06)
+------------------
+
+3.5.0 (2022-12-06)
+------------------
+
+3.4.0 (2022-11-27)
+------------------
+
+3.3.0 (2022-11-15)
+------------------
+
+3.2.0 (2022-10-15)
+------------------
+
+3.1.0 (2022-10-05)
+------------------
+
+3.0.0 (2022-09-19)
+------------------
+
+2.15.0 (2022-09-19)
+-------------------
+
+2.14.0 (2022-09-04)
+-------------------
+
+2.13.0 (2022-08-03)
+-------------------
+
+2.12.1 (2022-07-14)
+-------------------
+
+2.12.0 (2022-07-09)
+-------------------
+
+2.11.0 (2022-07-03)
+-------------------
+* [Interfaces] Improved ```get_name()``` method of hardware interfaces #api-breaking (`#737 <https://github.com/ros-controls/ros2_control/issues/737>`_)
+* Update maintainers of packages (`#753 <https://github.com/ros-controls/ros2_control/issues/753>`_)
+* Remove ament autolint (`#749 <https://github.com/ros-controls/ros2_control/issues/749>`_)
+* Fixup ament cpplint on 22.04 (`#747 <https://github.com/ros-controls/ros2_control/issues/747>`_)
+* Contributors: Bence Magyar, Denis Štogl, Lucas Schulze
+
+2.10.0 (2022-06-18)
+-------------------
+* CMakeLists cleanup (`#733 <https://github.com/ros-controls/ros2_control/issues/733>`_)
+* Update to clang format 12 (`#731 <https://github.com/ros-controls/ros2_control/issues/731>`_)
+* Contributors: Andy Zelenak, Bence Magyar
+
+2.9.0 (2022-05-19)
+------------------
+
 2.8.0 (2022-05-13)
 ------------------
 

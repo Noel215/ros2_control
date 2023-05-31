@@ -398,6 +398,21 @@ const auto valid_urdf_ros2_control_system_robot_with_size_and_data_type =
   </ros2_control>
 )";
 
+const auto valid_urdf_ros2_control_parameter_empty =
+  R"(
+  <ros2_control name="2DOF_System_Robot_Position_Only" type="system">
+    <hardware>
+      <plugin>ros2_control_demo_hardware/2DOF_System_Hardware_Position_Only</plugin>
+      <param name="example_param_write_for_sec"></param>
+      <param name="example_param_read_for_sec">2</param>
+    </hardware>
+    <joint name="joint1">
+      <command_interface name="position">
+      </command_interface>
+    </joint>
+  </ros2_control>
+)";
+
 // Errors
 const auto invalid_urdf_ros2_control_invalid_child =
   R"(
@@ -421,7 +436,7 @@ const auto invalid_urdf_ros2_control_missing_attribute =
   </ros2_control>
   )";
 
-const auto invalid_urdf_ros2_control_component_missing_class_type =
+const auto invalid_urdf_ros2_control_component_missing_plugin_name =
   R"(
   <ros2_control name="2DOF_System_Robot_Position_Only" type="system">
     <hardware>
@@ -452,7 +467,7 @@ const auto invalid_urdf_ros2_control_parameter_missing_name =
   </ros2_control>
 )";
 
-const auto invalid_urdf_ros2_control_component_class_type_empty =
+const auto invalid_urdf_ros2_control_component_plugin_name_empty =
   R"(
   <ros2_control name="2DOF_System_Robot_Position_Only" type="system">
     <hardware>
@@ -481,23 +496,6 @@ const auto invalid_urdf_ros2_control_component_interface_type_empty =
       <state_interface></state_interface>
       <param name="min_position_value">-1</param>
       <param name="max_position_value">1</param>
-    </joint>
-  </ros2_control>
-)";
-
-const auto invalid_urdf_ros2_control_parameter_empty =
-  R"(
-  <ros2_control name="2DOF_System_Robot_Position_Only" type="system">
-    <hardware>
-      <plugin>ros2_control_demo_hardware/2DOF_System_Hardware_Position_Only</plugin>
-      <param name="example_param_write_for_sec"></param>
-      <param name="example_param_read_for_sec">2</param>
-    </hardware>
-    <joint name="joint1">
-      <command_interface name="position">
-        <param name="min_position_value">-1</param>
-        <param name="max_position_value">1</param>
-      </command_interface>
     </joint>
   </ros2_control>
 )";

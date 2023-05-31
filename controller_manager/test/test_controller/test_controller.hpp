@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "controller_interface/controller_interface.hpp"
 #include "controller_manager/visibility_control.h"
@@ -71,6 +72,11 @@ public:
   size_t * cleanup_calls = nullptr;
   controller_interface::InterfaceConfiguration cmd_iface_cfg_;
   controller_interface::InterfaceConfiguration state_iface_cfg_;
+
+  std::vector<double> external_commands_for_testing_;
+  // enables external setting of values to command interfaces - used for simulation of hardware
+  // errors
+  double set_first_command_interface_value_to;
 };
 
 }  // namespace test_controller

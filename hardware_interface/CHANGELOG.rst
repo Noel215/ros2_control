@@ -2,6 +2,136 @@
 Changelog for package hardware_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.13.0 (2023-05-18)
+-------------------
+* Add class for thread management of async hw interfaces (`#981 <https://github.com/ros-controls/ros2_control/issues/981>`_)
+* Fix github links on control.ros.org (`#1019 <https://github.com/ros-controls/ros2_control/issues/1019>`_)
+* Update precommit libraries(`#1020 <https://github.com/ros-controls/ros2_control/issues/1020>`_)
+* Implement parse_bool and refactor a few (`#1014 <https://github.com/ros-controls/ros2_control/issues/1014>`_)
+* docs: Fix link to hardware_components (`#1009 <https://github.com/ros-controls/ros2_control/issues/1009>`_)
+* Contributors: Alejandro Bordallo, Christoph Fröhlich, Felix Exner (fexner), Márk Szitanics, mosfet80
+
+3.12.2 (2023-04-29)
+-------------------
+
+3.12.1 (2023-04-14)
+-------------------
+
+3.12.0 (2023-04-02)
+-------------------
+
+3.11.0 (2023-03-22)
+-------------------
+* Check for missing hardware interfaces that use the gpio tag. (`#975 <https://github.com/ros-controls/ros2_control/issues/975>`_)
+* Contributors: Ryan Sandzimier
+
+3.10.0 (2023-03-16)
+-------------------
+* Split transmission interfaces (`#938 <https://github.com/ros-controls/ros2_control/issues/938>`_)
+* Contributors: Noel Jiménez García
+
+3.9.1 (2023-03-09)
+------------------
+
+3.9.0 (2023-02-28)
+------------------
+
+3.8.0 (2023-02-10)
+------------------
+* Fix CMake install so overriding works (`#926 <https://github.com/ros-controls/ros2_control/issues/926>`_)
+* Async params (`#927 <https://github.com/ros-controls/ros2_control/issues/927>`_)
+* Contributors: Márk Szitanics, Tyler Weaver
+
+3.7.0 (2023-01-24)
+------------------
+* Make double parsing locale independent (`#921 <https://github.com/ros-controls/ros2_control/issues/921>`_)
+* Contributors: Henning Kayser
+
+3.6.0 (2023-01-12)
+------------------
+* 🔧 Fixes and updated on pre-commit hooks and their action (`#890 <https://github.com/ros-controls/ros2_control/issues/890>`_)
+* Contributors: Denis Štogl
+
+3.5.1 (2023-01-06)
+------------------
+
+3.5.0 (2022-12-06)
+------------------
+* ResourceManager doesn't always log an error on shutdown anymore (`#867 <https://github.com/ros-controls/ros2_control/issues/867>`_)
+* Rename class type to plugin name #api-breaking #abi-breaking (`#780 <https://github.com/ros-controls/ros2_control/issues/780>`_)
+* Contributors: Bence Magyar, Christopher Wecht
+
+3.4.0 (2022-11-27)
+------------------
+
+3.3.0 (2022-11-15)
+------------------
+* [MockHardware] Enalbe initialization non-joint components(`#822 <https://github.com/ros-controls/ros2_control/issues/822>`_)
+* Contributors: Felix Exner
+
+3.2.0 (2022-10-15)
+------------------
+* [MockComponents] Rename 'fake_sensor_commands' to 'mock_sensor_commands' (`#782 <https://github.com/ros-controls/ros2_control/issues/782>`_)
+* fix broken links (issue `#831 <https://github.com/ros-controls/ros2_control/issues/831>`_) (`#833 <https://github.com/ros-controls/ros2_control/issues/833>`_)
+* Contributors: Kvk Praneeth, Manuel Muth, Bence Magyar, Denis Štogl
+
+3.1.0 (2022-10-05)
+------------------
+* Cleanup Resource Manager a bit to increase clarity. (`#816 <https://github.com/ros-controls/ros2_control/issues/816>`_)
+* Handle hardware errors in Resource Manager (`#805 <https://github.com/ros-controls/ros2_control/issues/805>`_)
+  * Add code for deactivating controller when hardware gets an error on read and write.
+* Contributors: Denis Štogl
+
+3.0.0 (2022-09-19)
+------------------
+
+2.15.0 (2022-09-19)
+-------------------
+
+2.14.0 (2022-09-04)
+-------------------
+* Add doxygen comments (`#777 <https://github.com/ros-controls/ros2_control/issues/777>`_)
+* Contributors: Bence Magyar, Denis Štogl
+
+2.13.0 (2022-08-03)
+-------------------
+
+2.12.1 (2022-07-14)
+-------------------
+* Fix fake components deprecation and add test for it (`#771 <https://github.com/ros-controls/ros2_control/issues/771>`_)
+* Contributors: Bence Magyar
+
+2.12.0 (2022-07-09)
+-------------------
+* Hardware interface specific update rate and best practices about it (`#716 <https://github.com/ros-controls/ros2_control/issues/716>`_)
+* Deprecate fake components, long live mock components (`#762 <https://github.com/ros-controls/ros2_control/issues/762>`_)
+* Contributors: Bence Magyar, Lovro Ivanov
+
+2.11.0 (2022-07-03)
+-------------------
+* [Interfaces] Improved ```get_name()``` method of hardware interfaces #api-breaking (`#737 <https://github.com/ros-controls/ros2_control/issues/737>`_)
+* Update maintainers of packages (`#753 <https://github.com/ros-controls/ros2_control/issues/753>`_)
+* Remove ament autolint (`#749 <https://github.com/ros-controls/ros2_control/issues/749>`_)
+* Full functionality of chainable controllers in controller manager (`#667 <https://github.com/ros-controls/ros2_control/issues/667>`_)
+  * auto-switching of chained mode in controllers
+  * interface-matching approach for managing chaining controllers
+* Contributors: Bence Magyar, Denis Štogl, Lucas Schulze
+
+2.10.0 (2022-06-18)
+-------------------
+* Make RHEL CI happy! (`#730 <https://github.com/ros-controls/ros2_control/issues/730>`_)
+* CMakeLists cleanup (`#733 <https://github.com/ros-controls/ros2_control/issues/733>`_)
+* Refactored error handling when hardware name is duplicated (`#724 <https://github.com/ros-controls/ros2_control/issues/724>`_)
+* Update to clang format 12 (`#731 <https://github.com/ros-controls/ros2_control/issues/731>`_)
+* Contributors: Andy Zelenak, Bence Magyar, Kvk Praneeth, Márk Szitanics
+
+2.9.0 (2022-05-19)
+------------------
+* Resource Manager extension to support management of reference interfaces from chained controllers. (`#664 <https://github.com/ros-controls/ros2_control/issues/664>`_)
+  * Extend resource manager to manage reference interfaces from controllers.
+  * Adjust interface between CM and RM for managing controllers' reference interfaces.
+* Contributors: Denis Štogl
+
 2.8.0 (2022-05-13)
 ------------------
 * Pass time and period to read() and write() (`#715 <https://github.com/ros-controls/ros2_control/issues/715>`_)

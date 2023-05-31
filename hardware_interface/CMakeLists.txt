@@ -1,67 +1,69 @@
-cmake_minimum_required(VERSION 3.5)
-project(hardware_interface)
+cmake_minimum_required(VERSION 3.16)
+project(hardware_interface LANGUAGES CXX)
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
   add_compile_options(-Wall -Wextra)
 endif()
 
-find_package(ament_cmake REQUIRED)
-find_package(control_msgs REQUIRED)
-find_package(lifecycle_msgs REQUIRED)
-find_package(pluginlib REQUIRED)
-find_package(rclcpp_lifecycle REQUIRED)
-find_package(rcpputils REQUIRED)
-find_package(rcutils REQUIRED)
-find_package(tinyxml2_vendor REQUIRED)
-find_package(TinyXML2 REQUIRED)
+set(THIS_PACKAGE_INCLUDE_DEPENDS
+  control_msgs
+  lifecycle_msgs
+  pluginlib
+  rclcpp_lifecycle
+  rcpputils
+  rcutils
+  TinyXML2
+  tinyxml2_vendor
+)
 
-add_library(
-  hardware_interface
-  SHARED
+find_package(ament_cmake REQUIRED)
+foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
+  find_package(${Dependency} REQUIRED)
+endforeach()
+
+add_library(hardware_interface SHARED
   src/actuator.cpp
   src/component_parser.cpp
   src/resource_manager.cpp
   src/sensor.cpp
   src/system.cpp
 )
-target_include_directories(
-  hardware_interface
-  PUBLIC
-  include
+target_compile_features(hardware_interface PUBLIC cxx_std_17)
+target_include_directories(hardware_interface PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/hardware_interface>
 )
-ament_target_dependencies(
-  hardware_interface
-  control_msgs
-  lifecycle_msgs
-  pluginlib
-  rclcpp_lifecycle
-  rcutils
-  rcpputils
-)
+ament_target_dependencies(hardware_interface PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
 target_compile_definitions(hardware_interface PRIVATE "HARDWARE_INTERFACE_BUILDING_DLL")
 
-# Fake components
-add_library(
-  fake_components
-  SHARED
-  src/fake_components/generic_system.cpp
+add_library(mock_components SHARED
+  src/mock_components/generic_system.cpp
 )
-target_include_directories(
-  fake_components
-  PUBLIC
-  include
+target_compile_features(mock_components PUBLIC cxx_std_17)
+target_include_directories(mock_components PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/hardware_interface>
 )
-target_link_libraries(
-  fake_components
-  hardware_interface
+ament_target_dependencies(mock_components PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
+# Causes the visibility macros to use dllexport rather than dllimport,
+# which is appropriate when building the dll but not consuming it.
+target_compile_definitions(mock_components PRIVATE "HARDWARE_INTERFACE_BUILDING_DLL")
+
+pluginlib_export_plugin_description_file(
+  hardware_interface mock_components_plugin_description.xml)
+
+add_library(fake_components SHARED
+  src/mock_components/generic_system.cpp
+  src/mock_components/fake_generic_system.cpp
 )
-ament_target_dependencies(
-  fake_components
-  pluginlib
-  rcpputils
+target_compile_features(fake_components PUBLIC cxx_std_17)
+target_include_directories(fake_components PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include/hardware_interface>
 )
+ament_target_dependencies(fake_components PUBLIC ${THIS_PACKAGE_INCLUDE_DEPENDS})
 # Causes the visibility macros to use dllexport rather than dllimport,
 # which is appropriate when building the dll but not consuming it.
 target_compile_definitions(fake_components PRIVATE "HARDWARE_INTERFACE_BUILDING_DLL")
@@ -69,27 +71,7 @@ target_compile_definitions(fake_components PRIVATE "HARDWARE_INTERFACE_BUILDING_
 pluginlib_export_plugin_description_file(
   hardware_interface fake_components_plugin_description.xml)
 
-install(
-  DIRECTORY include/
-  DESTINATION include
-)
-
-install(
-  TARGETS
-  fake_components
-  hardware_interface
-  RUNTIME DESTINATION bin
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-)
-
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  list(APPEND AMENT_LINT_AUTO_EXCLUDE
-    ament_cmake_uncrustify
-    ament_cmake_cpplint
-  )
-  ament_lint_auto_find_test_dependencies()
 
   find_package(ament_cmake_gmock REQUIRED)
   find_package(ros2_control_test_assets REQUIRED)
@@ -142,7 +124,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_resource_manager hardware_interface)
   ament_target_dependencies(test_resource_manager ros2_control_test_assets)
 
-  ament_add_gmock(test_generic_system test/fake_components/test_generic_system.cpp)
+  ament_add_gmock(test_generic_system test/mock_components/test_generic_system.cpp)
   target_include_directories(test_generic_system PRIVATE include)
   target_link_libraries(test_generic_system hardware_interface)
   ament_target_dependencies(test_generic_system
@@ -151,20 +133,21 @@ if(BUILD_TESTING)
   )
 endif()
 
-ament_export_include_directories(
-  include
+install(
+  DIRECTORY include/
+  DESTINATION include/hardware_interface
 )
-ament_export_libraries(
-  fake_components
-  hardware_interface
+install(
+  TARGETS
+    fake_components
+    mock_components
+    hardware_interface
+  EXPORT export_hardware_interface
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
 )
-ament_export_dependencies(
-  control_msgs
-  lifecycle_msgs
-  rclcpp_lifecycle
-  pluginlib
-  rcpputils
-  tinyxml2_vendor
-  TinyXML2
-)
+
+ament_export_targets(export_hardware_interface HAS_LIBRARY_TARGET)
+ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
 ament_package()

@@ -2,6 +2,119 @@
 Changelog for package controller_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.13.0 (2023-05-18)
+-------------------
+
+3.12.2 (2023-04-29)
+-------------------
+
+3.12.1 (2023-04-14)
+-------------------
+* Add missing build_export_depends to controller_interface (`#989 <https://github.com/ros-controls/ros2_control/issues/989>`_)
+* Contributors: Scott K Logan
+
+3.12.0 (2023-04-02)
+-------------------
+* [Controller Interface] Add time and period paramters to update_reference_from_subscribers() (`#846 <https://github.com/ros-controls/ros2_control/issues/846>`_) #API-break
+* Contributors: Robotgir, Denis Štogl
+
+3.11.0 (2023-03-22)
+-------------------
+* [ControllerManager] Add Class for Async Controllers and Lifecycle Management (`#932 <https://github.com/ros-controls/ros2_control/issues/932>`_)
+* Contributors: Márk Szitanics
+
+3.10.0 (2023-03-16)
+-------------------
+
+3.9.1 (2023-03-09)
+------------------
+
+3.9.0 (2023-02-28)
+------------------
+
+3.8.0 (2023-02-10)
+------------------
+* Fix CMake install so overriding works (`#926 <https://github.com/ros-controls/ros2_control/issues/926>`_)
+* Async params (`#927 <https://github.com/ros-controls/ros2_control/issues/927>`_)
+* Contributors: Márk Szitanics, Tyler Weaver
+
+3.7.0 (2023-01-24)
+------------------
+
+3.6.0 (2023-01-12)
+------------------
+* Update imu_sensor.hpp (`#893 <https://github.com/ros-controls/ros2_control/issues/893>`_)
+  Covariances values should come from the IMU_Broadcaster, like the frame_id or the time
+* Contributors: flochre
+
+3.5.1 (2023-01-06)
+------------------
+
+3.5.0 (2022-12-06)
+------------------
+
+3.4.0 (2022-11-27)
+------------------
+
+3.3.0 (2022-11-15)
+------------------
+
+3.2.0 (2022-10-15)
+------------------
+
+3.1.0 (2022-10-05)
+------------------
+* Add docs in export interface configurations for controllers. (`#804 <https://github.com/ros-controls/ros2_control/issues/804>`_)
+* Contributors: Denis Štogl
+
+3.0.0 (2022-09-19)
+------------------
+
+2.15.0 (2022-09-19)
+-------------------
+* Remove autodeclare of parameters for controllers. (`#757 <https://github.com/ros-controls/ros2_control/issues/757>`_)
+* Contributors: Denis Štogl
+
+2.14.0 (2022-09-04)
+-------------------
+* Add doxygen comments (`#777 <https://github.com/ros-controls/ros2_control/issues/777>`_)
+* Contributors: Bence Magyar, Denis Štogl
+
+2.13.0 (2022-08-03)
+-------------------
+
+2.12.1 (2022-07-14)
+-------------------
+
+2.12.0 (2022-07-09)
+-------------------
+
+2.11.0 (2022-07-03)
+-------------------
+* [Interfaces] Improved ```get_name()``` method of hardware interfaces (soft) #api-breaking (`#737 <https://github.com/ros-controls/ros2_control/issues/737>`_)
+* Update maintainers of packages (`#753 <https://github.com/ros-controls/ros2_control/issues/753>`_)
+* Full functionality of chainable controllers in controller manager (`#667 <https://github.com/ros-controls/ros2_control/issues/667>`_)
+  * auto-switching of chained mode in controllers
+  * interface-matching approach for managing chaining controllers
+* Contributors: Bence Magyar, Denis Štogl, Lucas Schulze
+
+2.10.0 (2022-06-18)
+-------------------
+* CMakeLists cleanup (`#733 <https://github.com/ros-controls/ros2_control/issues/733>`_)
+* Update to clang format 12 (`#731 <https://github.com/ros-controls/ros2_control/issues/731>`_)
+* Make interface_list_contains_interface_type inline (`#721 <https://github.com/ros-controls/ros2_control/issues/721>`_)
+* Contributors: Andy Zelenak, Bence Magyar
+
+2.9.0 (2022-05-19)
+------------------
+* Adding base class for chained controllers: `ChainedControllersInterface` (`#663 <https://github.com/ros-controls/ros2_control/issues/663>`_)
+  * Extending ControllerInterface with methods for chainable controllers.
+  * Switching to chained_mode is only forbidden if controller is active.
+  * Default implementation for 'on_set_chained_mode' method.
+  * Use two internal methods instead of 'update' directly on chained controllers.
+* Add ControllerInterfaceBase class with methods for chainable controller (`#717 <https://github.com/ros-controls/ros2_control/issues/717>`_)
+* Contributors: Denis Štogl
+
 2.8.0 (2022-05-13)
 ------------------
 
