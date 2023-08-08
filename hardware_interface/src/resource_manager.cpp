@@ -514,9 +514,18 @@ public:
     {
       check_for_duplicates(hardware_info);
       load_hardware<Actuator, ActuatorInterface>(hardware_info, actuator_loader_, container);
-      initialize_hardware(hardware_info, container.back());
-      import_state_interfaces(container.back());
-      import_command_interfaces(container.back());
+      if (initialize_hardware(hardware_info, container.back()))
+      {
+        import_state_interfaces(container.back());
+        import_command_interfaces(container.back());
+      }
+      else
+      {
+        RCUTILS_LOG_WARN_NAMED(
+          "resource_manager",
+          "Actuator hardware component '%s' from plugin '%s' failed to initialize.",
+          hardware_info.name.c_str(), hardware_info.hardware_plugin_name.c_str());
+      }
     };
 
     if (hardware_info.is_async)
@@ -535,8 +544,17 @@ public:
     {
       check_for_duplicates(hardware_info);
       load_hardware<Sensor, SensorInterface>(hardware_info, sensor_loader_, container);
-      initialize_hardware(hardware_info, container.back());
-      import_state_interfaces(container.back());
+      if (initialize_hardware(hardware_info, container.back()))
+      {
+        import_state_interfaces(container.back());
+      }
+      else
+      {
+        RCUTILS_LOG_WARN_NAMED(
+          "resource_manager",
+          "Sensor hardware component '%s' from plugin '%s' failed to initialize.",
+          hardware_info.name.c_str(), hardware_info.hardware_plugin_name.c_str());
+      }
     };
 
     if (hardware_info.is_async)
@@ -555,9 +573,18 @@ public:
     {
       check_for_duplicates(hardware_info);
       load_hardware<System, SystemInterface>(hardware_info, system_loader_, container);
-      initialize_hardware(hardware_info, container.back());
-      import_state_interfaces(container.back());
-      import_command_interfaces(container.back());
+      if (initialize_hardware(hardware_info, container.back()))
+      {
+        import_state_interfaces(container.back());
+        import_command_interfaces(container.back());
+      }
+      else
+      {
+        RCUTILS_LOG_WARN_NAMED(
+          "resource_manager",
+          "System hardware component '%s' from plugin '%s' failed to initialize.",
+          hardware_info.name.c_str(), hardware_info.hardware_plugin_name.c_str());
+      }
     };
 
     if (hardware_info.is_async)
@@ -576,9 +603,18 @@ public:
     auto init_actuators = [&](auto & container)
     {
       container.emplace_back(Actuator(std::move(actuator)));
-      initialize_hardware(hardware_info, container.back());
-      import_state_interfaces(container.back());
-      import_command_interfaces(container.back());
+      if (initialize_hardware(hardware_info, container.back()))
+      {
+        import_state_interfaces(container.back());
+        import_command_interfaces(container.back());
+      }
+      else
+      {
+        RCUTILS_LOG_WARN_NAMED(
+          "resource_manager",
+          "Actuator hardware component '%s' from plugin '%s' failed to initialize.",
+          hardware_info.name.c_str(), hardware_info.hardware_plugin_name.c_str());
+      }
     };
 
     if (hardware_info.is_async)
@@ -597,8 +633,17 @@ public:
     auto init_sensors = [&](auto & container)
     {
       container.emplace_back(Sensor(std::move(sensor)));
-      initialize_hardware(hardware_info, container.back());
-      import_state_interfaces(container.back());
+      if (initialize_hardware(hardware_info, container.back()))
+      {
+        import_state_interfaces(container.back());
+      }
+      else
+      {
+        RCUTILS_LOG_WARN_NAMED(
+          "resource_manager",
+          "Sensor hardware component '%s' from plugin '%s' failed to initialize.",
+          hardware_info.name.c_str(), hardware_info.hardware_plugin_name.c_str());
+      }
     };
 
     if (hardware_info.is_async)
@@ -617,9 +662,18 @@ public:
     auto init_systems = [&](auto & container)
     {
       container.emplace_back(System(std::move(system)));
-      initialize_hardware(hardware_info, container.back());
-      import_state_interfaces(container.back());
-      import_command_interfaces(container.back());
+      if (initialize_hardware(hardware_info, container.back()))
+      {
+        import_state_interfaces(container.back());
+        import_command_interfaces(container.back());
+      }
+      else
+      {
+        RCUTILS_LOG_WARN_NAMED(
+          "resource_manager",
+          "System hardware component '%s' from plugin '%s' failed to initialize.",
+          hardware_info.name.c_str(), hardware_info.hardware_plugin_name.c_str());
+      }
     };
 
     if (hardware_info.is_async)
@@ -703,6 +757,7 @@ ResourceManager::ResourceManager(
 // CM API: Called in "callback/slow"-thread
 void ResourceManager::load_urdf(const std::string & urdf, bool validate_interfaces)
 {
+  is_urdf_loaded__ = true;
   const std::string system_type = "system";
   const std::string sensor_type = "sensor";
   const std::string actuator_type = "actuator";
@@ -740,6 +795,8 @@ void ResourceManager::load_urdf(const std::string & urdf, bool validate_interfac
     resource_storage_->actuators_.size() + resource_storage_->sensors_.size() +
     resource_storage_->systems_.size());
 }
+
+bool ResourceManager::is_urdf_already_loaded() const { return is_urdf_loaded__; }
 
 // CM API: Called in "update"-thread
 LoanedStateInterface ResourceManager::claim_state_interface(const std::string & key)
@@ -1352,26 +1409,5 @@ void ResourceManager::validate_storage(
 }
 
 // END: private methods
-
-// Temporary method to keep old interface and reduce framework changes in the PRs
-void ResourceManager::activate_all_components()
-{
-  using lifecycle_msgs::msg::State;
-  rclcpp_lifecycle::State active_state(
-    State::PRIMARY_STATE_ACTIVE, hardware_interface::lifecycle_state_names::ACTIVE);
-
-  for (auto & component : resource_storage_->actuators_)
-  {
-    set_component_state(component.get_name(), active_state);
-  }
-  for (auto & component : resource_storage_->sensors_)
-  {
-    set_component_state(component.get_name(), active_state);
-  }
-  for (auto & component : resource_storage_->systems_)
-  {
-    set_component_state(component.get_name(), active_state);
-  }
-}
 
 }  // namespace hardware_interface

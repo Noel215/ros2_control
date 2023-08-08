@@ -151,13 +151,20 @@ ControllerManager::ControllerManager(
   }
 
   std::string robot_description = "";
+  // TODO(destogl): remove support at the end of 2023
   get_parameter("robot_description", robot_description);
   if (robot_description.empty())
   {
-    throw std::runtime_error("Unable to initialize resource manager, no robot description found.");
+    subscribe_to_robot_description_topic();
   }
-
-  init_resource_manager(robot_description);
+  else
+  {
+    RCLCPP_WARN(
+      get_logger(),
+      "[Deprecated] Passing the robot description parameter directly to the control_manager node "
+      "is deprecated. Use '~/robot_description' topic from 'robot_state_publisher' instead.");
+    init_resource_manager(robot_description);
+  }
 
   diagnostics_updater_.setHardwareID("ros2_control");
   diagnostics_updater_.add(
@@ -183,10 +190,54 @@ ControllerManager::ControllerManager(
   {
     RCLCPP_WARN(get_logger(), "'update_rate' parameter not set, using default value.");
   }
+
+  subscribe_to_robot_description_topic();
+
   diagnostics_updater_.setHardwareID("ros2_control");
   diagnostics_updater_.add(
     "Controllers Activity", this, &ControllerManager::controller_activity_diagnostic_callback);
   init_services();
+}
+
+void ControllerManager::subscribe_to_robot_description_topic()
+{
+  // set QoS to transient local to get messages that have already been published
+  // (if robot state publisher starts before controller manager)
+  robot_description_subscription_ = create_subscription<std_msgs::msg::String>(
+    "~/robot_description", rclcpp::QoS(1).transient_local(),
+    std::bind(&ControllerManager::robot_description_callback, this, std::placeholders::_1));
+  RCLCPP_INFO(
+    get_logger(), "Subscribing to '%s' topic for robot description.",
+    robot_description_subscription_->get_topic_name());
+}
+
+void ControllerManager::robot_description_callback(const std_msgs::msg::String & robot_description)
+{
+  RCLCPP_INFO(get_logger(), "Received robot description from topic.");
+  RCLCPP_DEBUG(
+    get_logger(), "'Content of robot description file: %s", robot_description.data.c_str());
+  // TODO(Manuel): errors should probably be caught since we don't want controller_manager node
+  // to die if a non valid urdf is passed. However, should maybe be fine tuned.
+  try
+  {
+    if (resource_manager_->is_urdf_already_loaded())
+    {
+      RCLCPP_WARN(
+        get_logger(),
+        "ResourceManager has already loaded an urdf file. Ignoring attempt to reload a robot "
+        "description file.");
+      return;
+    }
+    init_resource_manager(robot_description.data.c_str());
+  }
+  catch (std::runtime_error & e)
+  {
+    RCLCPP_ERROR_STREAM(
+      get_logger(),
+      "The published robot description file (urdf) seems not to be genuine. The following error "
+      "was caught:"
+        << e.what());
+  }
 }
 
 void ControllerManager::init_resource_manager(const std::string & robot_description)
@@ -194,30 +245,85 @@ void ControllerManager::init_resource_manager(const std::string & robot_descript
   // TODO(destogl): manage this when there is an error - CM should not die because URDF is wrong...
   resource_manager_->load_urdf(robot_description);
 
+  // Get all components and if they are not defined in parameters activate them automatically
+  auto components_to_activate = resource_manager_->get_components_status();
+
   using lifecycle_msgs::msg::State;
 
-  std::vector<std::string> configure_components_on_start = std::vector<std::string>({});
-  if (get_parameter("configure_components_on_start", configure_components_on_start))
+  auto set_components_to_state =
+    [&](const std::string & parameter_name, rclcpp_lifecycle::State state)
   {
-    RCLCPP_WARN_STREAM(
-      get_logger(),
-      "[Deprecated]: Usage of parameter \"configure_components_on_start\" is deprecated. Use "
-      "hardware_spawner instead.");
-    rclcpp_lifecycle::State inactive_state(
-      State::PRIMARY_STATE_INACTIVE, hardware_interface::lifecycle_state_names::INACTIVE);
-    for (const auto & component : configure_components_on_start)
+    std::vector<std::string> components_to_set = std::vector<std::string>({});
+    if (get_parameter(parameter_name, components_to_set))
     {
-      resource_manager_->set_component_state(component, inactive_state);
+      for (const auto & component : components_to_set)
+      {
+        if (component.empty())
+        {
+          continue;
+        }
+        if (components_to_activate.find(component) == components_to_activate.end())
+        {
+          RCLCPP_WARN(
+            get_logger(), "Hardware component '%s' is unknown, therefore not set in '%s' state.",
+            component.c_str(), state.label().c_str());
+        }
+        else
+        {
+          RCLCPP_INFO(
+            get_logger(), "Setting component '%s' to '%s' state.", component.c_str(),
+            state.label().c_str());
+          resource_manager_->set_component_state(component, state);
+          components_to_activate.erase(component);
+        }
+      }
     }
+  };
+
+  // unconfigured (loaded only)
+  set_components_to_state(
+    "hardware_components_initial_state.unconfigured",
+    rclcpp_lifecycle::State(
+      State::PRIMARY_STATE_UNCONFIGURED, hardware_interface::lifecycle_state_names::UNCONFIGURED));
+
+  // inactive (configured)
+  // BEGIN: Keep old functionality on for backwards compatibility (Remove at the end of 2023)
+  std::vector<std::string> configure_components_on_start = std::vector<std::string>({});
+  get_parameter("configure_components_on_start", configure_components_on_start);
+  if (!configure_components_on_start.empty())
+  {
+    RCLCPP_WARN(
+      get_logger(),
+      "Parameter 'configure_components_on_start' is deprecated. "
+      "Use 'hardware_components_initial_state.inactive' instead, to set component's initial "
+      "state to 'inactive'. Don't use this parameters in combination with the new "
+      "'hardware_components_initial_state' parameter structure.");
+    set_components_to_state(
+      "configure_components_on_start",
+      rclcpp_lifecycle::State(
+        State::PRIMARY_STATE_INACTIVE, hardware_interface::lifecycle_state_names::INACTIVE));
+  }
+  // END: Keep old functionality on humble backwards compatibility (Remove at the end of 2023)
+  else
+  {
+    set_components_to_state(
+      "hardware_components_initial_state.inactive",
+      rclcpp_lifecycle::State(
+        State::PRIMARY_STATE_INACTIVE, hardware_interface::lifecycle_state_names::INACTIVE));
   }
 
+  // BEGIN: Keep old functionality on for backwards compatibility (Remove at the end of 2023)
   std::vector<std::string> activate_components_on_start = std::vector<std::string>({});
-  if (get_parameter("activate_components_on_start", activate_components_on_start))
+  get_parameter("activate_components_on_start", activate_components_on_start);
+  rclcpp_lifecycle::State active_state(
+    State::PRIMARY_STATE_ACTIVE, hardware_interface::lifecycle_state_names::ACTIVE);
+  if (!activate_components_on_start.empty())
   {
-    RCLCPP_WARN_STREAM(
+    RCLCPP_WARN(
       get_logger(),
-      "[Deprecated]: Usage of parameter \"activate_components_on_start\" is deprecated. Use "
-      "hardware_spawner instead.");
+      "Parameter 'activate_components_on_start' is deprecated. "
+      "Components are activated per default. Don't use this parameters in combination with the new "
+      "'hardware_components_initial_state' parameter structure.");
     rclcpp_lifecycle::State active_state(
       State::PRIMARY_STATE_ACTIVE, hardware_interface::lifecycle_state_names::ACTIVE);
     for (const auto & component : activate_components_on_start)
@@ -225,15 +331,16 @@ void ControllerManager::init_resource_manager(const std::string & robot_descript
       resource_manager_->set_component_state(component, active_state);
     }
   }
-  // if both parameter are empty or non-existing preserve behavior where all components are
-  // activated per default
-  if (configure_components_on_start.empty() && activate_components_on_start.empty())
+  // END: Keep old functionality on humble for backwards compatibility (Remove at the end of 2023)
+  else
   {
-    RCLCPP_WARN_STREAM(
-      get_logger(),
-      "[Deprecated]: Automatic activation of all hardware components will not be supported in the "
-      "future anymore. Use hardware_spawner instead.");
-    resource_manager_->activate_all_components();
+    // activate all other components
+    for (const auto & [component, state] : components_to_activate)
+    {
+      rclcpp_lifecycle::State active_state(
+        State::PRIMARY_STATE_ACTIVE, hardware_interface::lifecycle_state_names::ACTIVE);
+      resource_manager_->set_component_state(component, active_state);
+    }
   }
 }
 
@@ -501,6 +608,31 @@ controller_interface::return_type ControllerManager::configure_controller(
   {
     async_controller_threads_.emplace(
       controller_name, std::make_unique<ControllerThreadWrapper>(controller, update_rate_));
+  }
+
+  const auto controller_update_rate = controller->get_update_rate();
+  const auto cm_update_rate = get_update_rate();
+  if (controller_update_rate > cm_update_rate)
+  {
+    RCLCPP_WARN(
+      get_logger(),
+      "The controller : %s update rate : %d Hz should be less than or equal to controller "
+      "manager's update rate : %d Hz!. The controller will be updated at controller_manager's "
+      "update rate.",
+      controller_name.c_str(), controller_update_rate, cm_update_rate);
+  }
+  else if (controller_update_rate != 0 && cm_update_rate % controller_update_rate != 0)
+  {
+    // NOTE: The following computation is done to compute the approx controller update that can be
+    // achieved w.r.t to the CM's update rate. This is done this way to take into account the
+    // unsigned integer division.
+    const auto act_ctrl_update_rate = cm_update_rate / (cm_update_rate / controller_update_rate);
+    RCLCPP_WARN(
+      get_logger(),
+      "The controller : %s update rate : %d Hz is not a perfect divisor of the controller "
+      "manager's update rate : %d Hz!. The controller will be updated with nearest divisor's "
+      "update rate which is : %d Hz.",
+      controller_name.c_str(), controller_update_rate, cm_update_rate, act_ctrl_update_rate);
   }
 
   // CHAINABLE CONTROLLERS: get reference interfaces from chainable controllers
@@ -1280,8 +1412,11 @@ void ControllerManager::activate_controllers(
     if (new_state.id() != lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
     {
       RCLCPP_ERROR(
-        get_logger(), "After activating, controller '%s' is in state '%s', expected Active",
-        controller->get_node()->get_name(), new_state.label().c_str());
+        get_logger(),
+        "After activation, controller '%s' is in state '%s' (%d), expected '%s' (%d).",
+        controller->get_node()->get_name(), new_state.label().c_str(), new_state.id(),
+        hardware_interface::lifecycle_state_names::ACTIVE,
+        lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE);
     }
 
     if (controller->is_async())
@@ -1765,9 +1900,12 @@ controller_interface::return_type ControllerManager::update(
     if (!loaded_controller.c->is_async() && is_controller_active(*loaded_controller.c))
     {
       const auto controller_update_rate = loaded_controller.c->get_update_rate();
+      const auto controller_update_factor =
+        (controller_update_rate == 0) || (controller_update_rate >= update_rate_)
+          ? 1u
+          : update_rate_ / controller_update_rate;
 
-      bool controller_go =
-        controller_update_rate == 0 || ((update_loop_counter_ % controller_update_rate) == 0);
+      bool controller_go = ((update_loop_counter_ % controller_update_factor) == 0);
       RCLCPP_DEBUG(
         get_logger(), "update_loop_counter: '%d ' controller_go: '%s ' controller_name: '%s '",
         update_loop_counter_, controller_go ? "True" : "False",
@@ -1776,7 +1914,7 @@ controller_interface::return_type ControllerManager::update(
       if (controller_go)
       {
         auto controller_ret = loaded_controller.c->update(
-          time, (controller_update_rate != update_rate_ && controller_update_rate != 0)
+          time, (controller_update_factor != 1u)
                   ? rclcpp::Duration::from_seconds(1.0 / controller_update_rate)
                   : period);
 
